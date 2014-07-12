@@ -1,0 +1,13 @@
+{
+  "name":"bower-website-ui",
+  "description":"bower-website-ui",
+  "main":["js/website.ui.min.js","css/website.ui.min.css"],
+  "dependencies": {
+      "bootstrap":"3.1.1",
+      "angular":"~1.2.17"
+  },
+  "repository":{
+      "type":"git",
+      "url":"https://github.com/shangmin1990/bower-website-ui.git"
+  }
+}
