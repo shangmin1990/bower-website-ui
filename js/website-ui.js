@@ -110,11 +110,24 @@ angular.module('ui.website.dialog.directives', [])
             angular.element(children[0])
                 .unbind('click')
                 .bind('click', function(evt){
-                  var result = scope.callback(ele.find('input').val());
-                  if((typeof result === 'boolean' && result) || result === 1){
-                    hide();
+                  if(!scope.option.ajax){
+                    var result = scope.option.callback(ele.find('input').val());
+                    if((typeof result === 'boolean' && result) || result === 1){
+                      hide();
+                    }else{
+                      ele.find('input').parent().addClass('has-error').addClass('has-feedback');
+                    }
                   }else{
-                    ele.find('input').parent().addClass('has-error').addClass('has-feedback');
+                    scope.option.callback(ele.find('input').val(), function(data){
+                      if(scope.option.success){
+                        scope.option.success(data);
+                      }
+                      hide();
+                    }, function(status){
+                      if(scope.option.error){
+                        scope.option.error(status);
+                      }
+                    });
                   }
 //                  hide();
                 });
@@ -262,8 +275,11 @@ angular.module('ui.website.dialog.service', [])
           scope.ok = success;
           $compile(wconfirm)(scope);
         },
-        prompt: function(callback, title){
+        prompt: function(option){
           var wprompt = $document.find('wprompt');
+          if(!option){
+            option = {};
+          }
           if(wprompt.length == 0){
             wprompt = angular.element('<wprompt title="'+title+'"><input type="text" class="form-control" style="width: 70%; margin-left: 15%"/></wprompt>');
             $document.find('body').append(wprompt);
@@ -271,11 +287,12 @@ angular.module('ui.website.dialog.service', [])
             wprompt.html('<input type="text" class="form-control" style="width: 70%; margin-left: 15%"/>');
           }
           var scope = $rootScope.$new(false);
-          if(!title){
-            title = "请输入";
-          }
-          scope.title = title;
-          scope.callback = callback;
+//          if(!option.title){
+//            option.title = "请输入";
+//          }
+//          scope.title = option.title;
+//          scope.callback = option.callback;
+          scope.option = option;
           $compile(wprompt)(scope);
         }
       }
