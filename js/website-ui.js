@@ -279,12 +279,17 @@ angular.module('ui.website.dialog.service', [])
           var wprompt = $document.find('wprompt');
           if(!option){
             option = {};
+            option.textType = "text";
+          }
+
+          if(!option.title){
+            option.title = "请输入";
           }
           if(wprompt.length == 0){
-            wprompt = angular.element('<wprompt title="'+title+'"><input type="text" class="form-control" style="width: 70%; margin-left: 15%"/></wprompt>');
+            wprompt = angular.element('<wprompt title="'+option.title+'"><input type="'+option.textType+'" class="form-control" style="width: 70%; margin-left: 15%"/></wprompt>');
             $document.find('body').append(wprompt);
           }else{
-            wprompt.html('<input type="text" class="form-control" style="width: 70%; margin-left: 15%"/>');
+            wprompt.html('<input type="'+option.textType+'" class="form-control" style="width: 70%; margin-left: 15%"/>');
           }
           var scope = $rootScope.$new(false);
 //          if(!option.title){
@@ -293,6 +298,7 @@ angular.module('ui.website.dialog.service', [])
 //          scope.title = option.title;
 //          scope.callback = option.callback;
           scope.option = option;
+          scope.title = option.title;
           $compile(wprompt)(scope);
         }
       }
