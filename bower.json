@@ -1,7 +1,6 @@
 {
   "name":"bower-website-ui",
   "description":"bower-website-ui",
-  "main":["js/website.ui.min.js","css/website.ui.min.css"],
   "dependencies": {
       "bootstrap":"3.1.*",
       "angular":"1.*.*"
