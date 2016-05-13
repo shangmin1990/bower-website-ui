@@ -282,17 +282,21 @@ angular.module("ui.website.chart",[])
                     return highcharts.init(dom);
                 }
             },
-            getOption: function(chart, originalData, style){
+            getOption: function(chart, originalData, style, formatter){
                 if(!chart){
                     return originalData;
                 }
                 var option = angular.copy(defaultEChartOptionsMap[chart]);
+                if(formatter){
+                    option.tooltip.formatter = formatter();
+                }
+
                 var y = originalData.data;
                 var x = originalData.category;
-                var yAxisDatas = [];
                 var series = [];
                 if(chart == 'bar'){
                     for(var j = 0; j < y.length; j++){
+                        var yAxisDatas = [];
                         var perData = y[j];
                         var formatData = [];
                         var seriesItem = {
@@ -360,6 +364,7 @@ angular.module("ui.website.chart",[])
                     return option;
                 }else if(chart == 'line'){
                     for(var j = 0; j < y.length; j++){
+                        var yAxisDatas = [];
                         var perData = y[j];
                         var formatData = [];
                         var seriesItem = {
@@ -379,33 +384,33 @@ angular.module("ui.website.chart",[])
                         for(var i = 0 ; i < formatData.length; i++){
                             var yAxisDataItem = {
                                 "value": formatData[i].data,
-                                "name": formatData[i].name,
-                                "itemStyle":{
-                                    "normal":{
-                                        "label":{
-                                            "show":true,
-                                            "position":"top",
-                                            "formatter":"{c}%",
-                                            "textStyle":{
-                                                "color":"#37a3fd"
-                                            }
-                                        },
-                                        "labelLine":{
-                                            "show":false
-                                        }
-                                    },
-                                    //    ,
-                                    "emphasis":{
-                                        "label":{
-                                            "show":true,
-                                            "position":"top",
-                                            "formatter":"{c}%",
-                                            "textStyle":{
-                                                "color":"#37a3fd"
-                                            }
-                                        }
-                                    }
-                                }
+                                "name": formatData[i].name
+                                //"itemStyle":{
+                                //    "normal":{
+                                //        "label":{
+                                //            "show":true,
+                                //            "position":"top",
+                                //            "formatter":"{c}%",
+                                //            "textStyle":{
+                                //                "color":"#37a3fd"
+                                //            }
+                                //        },
+                                //        "labelLine":{
+                                //            "show":false
+                                //        }
+                                //    },
+                                //    //    ,
+                                //    "emphasis":{
+                                //        "label":{
+                                //            "show":true,
+                                //            "position":"top",
+                                //            "formatter":"{c}%",
+                                //            "textStyle":{
+                                //                "color":"#37a3fd"
+                                //            }
+                                //        }
+                                //    }
+                                //}
                             };
                             yAxisDatas.push(yAxisDataItem);
                         }
@@ -413,31 +418,9 @@ angular.module("ui.website.chart",[])
                             var itemStyle = {
                                 "normal":{
                                     color: style.color[j],
-                                    "label":{
-                                        "show":true,
-                                        "position":"top",
-                                        "formatter":"{c}%",
-                                        "textStyle":{
-                                            "color":"#37a3fd"
-                                        }
-                                    },
-                                    "labelLine":{
-                                        "show":false
-                                    }
-                                },
-                                //    ,
-                                "emphasis":{
-                                    "label":{
-                                        "show":true,
-                                        "position":"top",
-                                        "formatter":"{c}%",
-                                        "textStyle":{
-                                            "color":"#37a3fd"
-                                        }
-                                    }
                                 }
                             };
-                            seriesItem.itemStyle = itemStyle;
+                            seriesItem.lineStyle = itemStyle;
                         }
                         seriesItem.data = yAxisDatas;
                         series.push(seriesItem);
@@ -448,6 +431,7 @@ angular.module("ui.website.chart",[])
                     return option;
                 }else if (chart == 'pie'){
                     for(var j =0 ; j< y.length; j++){
+                        var yAxisDatas = [];
                         var yDataItem = y[j];
                         if(!yDataItem || yDataItem.length != x.length){
                             throw new Error('Data error, check your data please');
@@ -474,11 +458,11 @@ angular.module("ui.website.chart",[])
                         }
                         option.series[j].data = yAxisDatas;
                         option.legend.data = originalData.category;
-                        if(style.center){
-                            option.series[j].center = style.center;
+                        if(style && style.center && style.center.length >= y.length){
+                            option.series[j].center = style.center[j];
                         }
-                        if(style.radius){
-                            option.series[j].radius = style.radius;
+                        if(style && style.radius && style.radius.length >= y.length){
+                            option.series[j].radius = style.radius[j];
                         }
                         return option;
                     }
@@ -520,7 +504,8 @@ angular.module("ui.website.chart",[])
                 data: '=',
                 eventType: '@',
                 eventHandler: '&',
-                chartStyle: '@'
+                chartStyle: '@',
+                tooltipFormatter: '&'
             },
             templateUrl: 'website-ui/chart/no-data.html',
             replace: false,
@@ -571,7 +556,7 @@ angular.module("ui.website.chart",[])
                     scope.$watch('data', function(newValue, oldValue){
                         if(newValue){
                             try{
-                                var option = ChartService.getOption(scope.chart, newValue, style_extend);
+                                var option = ChartService.getOption(scope.chart, newValue, style_extend, scope.tooltipFormatter);
                                 chartInstance.hideLoading();
                                 chartInstance.setOption(option);
                                 scope.noData = false;
