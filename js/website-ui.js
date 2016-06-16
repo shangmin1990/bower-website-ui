@@ -8,8 +8,9 @@ angular.module("ui.website",[
     'ui.website.chart'
 ])
 /**
- * Create by benjamin at 2014/7/4
- * echarts main script
+ * @Author benjamin zhaoyuxiang
+ * @Desc echarts main script
+ * @Date 2016-04-15
  */
 angular.module("ui.website.chart",[])
     .service('ChartService', [function(){
@@ -576,9 +577,13 @@ angular.module("ui.website.chart",[])
                     if(config.showLoading){
                         chartInstance.showLoading();
                     }
+                    scope.$on('chart:loading', function(){
+                        scope.noData = false;
+                        chartInstance.showLoading();
+                    });
                     scope.$watch('chartData', function(newValue, oldValue){
                         if(newValue !== undefined){
-                            if(newValue == 'loading'){
+                            if(newValue == 'chart:loading'){
                                 scope.noData = false;
                                 chartInstance.showLoading();
                                 return;
