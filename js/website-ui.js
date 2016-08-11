@@ -529,7 +529,10 @@ angular.module("ui.website.chart",[])
                 eventType: '@',
                 eventHandler: '&',
                 chartStyle: '@',
-                tooltipFormatter: '&'
+                tooltipFormatter: '&',
+                // 更新数据时, legend没有更新,setOption(o, true);
+                // @ http://echarts.baidu.com/api.html#echartsInstance.setOption
+                updateNotMerge: '@'
             },
             templateUrl: 'website-ui/chart/no-data.html',
             replace: false,
@@ -594,7 +597,11 @@ angular.module("ui.website.chart",[])
                             try{
                                 var option = ChartService.getOption(scope.chart, newValue, style_extend, scope.tooltipFormatter, config);
                                 chartInstance.hideLoading();
-                                chartInstance.setOption(option);
+                                var updateNotMerge = false;
+                                if(scope.updateNotMerge === 'true'){
+                                    updateNotMerge = true;
+                                }
+                                chartInstance.setOption(option, updateNotMerge);
                                 scope.noData = false;
                                 //scope.noData = true;
                             }catch (e){
