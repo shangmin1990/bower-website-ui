@@ -5,7 +5,8 @@
 angular.module("ui.website",[
     'ui.website.player',
     'ui.website.dialog',
-    'ui.website.chart'
+    'ui.website.chart',
+    'ui.website.fileupload'
 ])
 /**
  * @Author benjamin zhaoyuxiang
@@ -640,204 +641,240 @@ angular.module('ui.website.dialog', [
 ])
 angular.module('ui.website.dialog.directives', [])
     .directive('walert',['$timeout', function($timeout){
-      return {
-        restrict:'EA',
-        transclude: true,
+        return {
+            restrict:'EA',
+            transclude: true,
 //        replace:true,
-        templateUrl:'template/alert.html',
-        compile: function(ele, attrs, transclude){
-          function hide(){
-            ele.children().removeClass('in');
-            //为什么需要timeout 如果直接hide则没有动画效果 保持跟动画的效果一样多的延时
-            //TODO 需要改进
-            $timeout(function(){
-              ele.hide();
-            },150)
-          };
-          ele.show();
-          return {
-            pre: angular.noop ,
-            post: function(scope, ele, attrs, ctrls){
-              ele.find('div.modal-footer').find('button').unbind('click').bind('click', function(evt){
-                hide();
-              });
-              ele.find('button.close').unbind('click').bind('click', function(evt){
-                hide();
-              });
-              //需要改动。
+            templateUrl:'template/alert.html',
+            compile: function(ele, attrs, transclude){
+                function hide(){
+                    ele.children().removeClass('in');
+                    //为什么需要timeout 如果直接hide则没有动画效果 保持跟动画的效果一样多的延时
+                    //TODO 需要改进
+                    $timeout(function(){
+                        ele.hide();
+                    },150)
+                };
+                ele.show();
+                return {
+                    pre: angular.noop ,
+                    post: function(scope, ele, attrs, ctrls){
+                        ele.find('div.modal-footer').find('button').unbind('click').bind('click', function(evt){
+                            hide();
+                        });
+                        ele.find('button.close').unbind('click').bind('click', function(evt){
+                            hide();
+                        });
+                        //需要改动。
 //              ele.children().addClass('in');
-              // 为什么需要timeout 理由同上
-              //TODO 需要改进
-              $timeout(function(){
-                ele.children().addClass('in');
-              },0);
+                        // 为什么需要timeout 理由同上
+                        //TODO 需要改进
+                        $timeout(function(){
+                            ele.children().addClass('in');
+                        },0);
 
+                    }
+                }
             }
-          }
         }
-      }
     }])
     .directive('wconfirm',['$timeout', function($timeout){
-      return {
-        restrict:'EA',
-        transclude: true,
+        return {
+            restrict:'EA',
+            transclude: true,
 //        replace:true,
-        templateUrl:'template/confirm.html',
-        compile: function(ele, attrs, transclude){
-          function hide(){
-            ele.children().removeClass('in');
-            //为什么需要timeout 如果直接hide则没有动画效果 保持跟动画的效果一样多的延时
-            //TODO 需要改进
-            $timeout(function(){
-              ele.hide();
-            },150)
-          };
-          ele.show();
-          return {
-            pre: angular.noop ,
-            post: function(scope, ele, attrs, ctrls){
-              var children = ele.find('div.modal-footer').find('button');
-              angular.element(children[0])
-                  .unbind('click')
-                  .bind('click', function(evt){
+            templateUrl:'template/confirm.html',
+            compile: function(ele, attrs, transclude){
+                function hide(){
+                    ele.children().removeClass('in');
+                    //为什么需要timeout 如果直接hide则没有动画效果 保持跟动画的效果一样多的延时
+                    //TODO 需要改进
+                    $timeout(function(){
+                        ele.hide();
+                    },150)
+                };
+                ele.show();
+                return {
+                    pre: angular.noop ,
+                    post: function(scope, ele, attrs, ctrls){
+                        var children = ele.find('div.modal-footer').find('button');
+                        angular.element(children[0])
+                            .unbind('click')
+                            .bind('click', function(evt){
 //                    alert('我是success回调啊');
-                    scope.ok();
-                    hide();
-                  });
-              angular.element(children[1])
-                  .unbind('click')
-                  .bind('click', function(evt){
-                    hide();
-                  });
-              ele.find('button.close').unbind('click').bind('click', function(evt){
-                hide();
-              });
-              //需要改动。
+                                scope.ok();
+                                hide();
+                            });
+                        angular.element(children[1])
+                            .unbind('click')
+                            .bind('click', function(evt){
+                                hide();
+                            });
+                        ele.find('button.close').unbind('click').bind('click', function(evt){
+                            hide();
+                        });
+                        //需要改动。
 //              ele.children().addClass('in');
-              // 为什么需要timeout 理由同上
-              //TODO 需要改进
-              $timeout(function(){
-                ele.children().addClass('in');
-              },0);
+                        // 为什么需要timeout 理由同上
+                        //TODO 需要改进
+                        $timeout(function(){
+                            ele.children().addClass('in');
+                        },0);
 
+                    }
+                }
             }
-          }
         }
-      }
     }])
     .directive('wprompt',['$timeout', function($timeout){
-      return {
-        restrict:'EA',
-        transclude: true,
+        return {
+            restrict:'EA',
+            transclude: true,
 //        replace:true,
-        templateUrl:'template/confirm.html',
-        compile: function(ele, attrs, transclude){
-          function link(scope, ele, attrs, ctrls){
+            templateUrl:'template/confirm.html',
+            compile: function(ele, attrs, transclude){
+                function link(scope, ele, attrs, ctrls){
 //        var self_ = this;
-            var children = ele.find('div.modal-footer').find('button');
-            angular.element(children[0])
-                .unbind('click')
-                .bind('click', function(evt){
-                  if(!scope.option.ajax){
-                    var result = scope.option.callback(ele.find('input').val());
-                    if((typeof result === 'boolean' && result) || result === 1){
-                      hide();
-                    }else{
-                      ele.find('input').parent().addClass('has-error').addClass('has-feedback');
-                    }
-                  }else{
-                    scope.option.callback(ele.find('input').val(), function(data){
-                      if(scope.option.success){
-                        scope.option.success(data);
-                      }
-                      hide();
-                    }, function(status){
-                      if(scope.option.error){
-                        scope.option.error(status);
-                      }
-                    });
-                  }
+                    var children = ele.find('div.modal-footer').find('button');
+                    angular.element(children[0])
+                        .unbind('click')
+                        .bind('click', function(evt){
+                            if(!scope.option.ajax){
+                                var result = scope.option.callback(ele.find('input').val());
+                                if((typeof result === 'boolean' && result) || result === 1){
+                                    hide();
+                                }else{
+                                    ele.find('input').parent().addClass('has-error').addClass('has-feedback');
+                                }
+                            }else{
+                                scope.option.callback(ele.find('input').val(), function(data){
+                                    if(scope.option.success){
+                                        scope.option.success(data);
+                                    }
+                                    hide();
+                                }, function(status){
+                                    if(scope.option.error){
+                                        scope.option.error(status);
+                                    }
+                                });
+                            }
 //                  hide();
-                });
-            angular.element(children[1])
-                .unbind('click')
-                .bind('click', function(evt){
-                  hide();
-                });
-            ele.find('button.close').unbind('click').bind('click', function(evt){
-              hide();
-            });
-            $timeout(function(){
-              ele.children().addClass('in');
-            },0);
-          }
-          function hide(){
-            ele.children().removeClass('in');
-            //为什么需要timeout 如果直接hide则没有动画效果 保持跟动画的效果一样多的延时
-            //TODO 需要改进
-            $timeout(function(){
-              ele.hide();
-            },150);
-          };
-          ele.show();
-          return link;
+                        });
+                    angular.element(children[1])
+                        .unbind('click')
+                        .bind('click', function(evt){
+                            hide();
+                        });
+                    ele.find('button.close').unbind('click').bind('click', function(evt){
+                        hide();
+                    });
+                    $timeout(function(){
+                        ele.children().addClass('in');
+                    },0);
+                }
+                function hide(){
+                    ele.children().removeClass('in');
+                    //为什么需要timeout 如果直接hide则没有动画效果 保持跟动画的效果一样多的延时
+                    //TODO 需要改进
+                    $timeout(function(){
+                        ele.hide();
+                    },150);
+                };
+                ele.show();
+                return link;
+            }
         }
-      }
-    }]).run(['$templateCache', function($templateCache){
-      $templateCache.put('template/alert.html',
-        '<div class="modal fade" style="display:block;">'+
-          '<div class="modal-dialog modal-sm">'+
+    }])
+    .directive('dialog', ['$timeout', '$http', function($timeout, $http){
+        return {
+            restrict:'EA',
+            scope: false,
+            transclude: true,
+            templateUrl:'template/dialog.html',
+            compile: function(ele, attrs, transclude, ctrls){
+                ele.show();
+                ele[0].style.display = 'block';
+                ele.children().addClass('in');
+                ele.find('.modal-header .closeimg').on('click', function(){
+                    ele[0].style.display = 'none';
+                    ele.children().removeClass('in');
+                    ele.remove();
+                })
+            }
+        }
+    }])
+    .run(['$templateCache', function($templateCache){
+        $templateCache.put('template/alert.html',
+            '<div class="modal fade" style="display:block;">'+
+            '<div class="modal-dialog modal-sm">'+
             '<div class="modal-content">'+
-              '<div class="modal-header">'+
-                '<div class="row">'+
-                  '<div class="col-md-9 col-lg-9">{{title}}</div>'+
-                  '<div class="col-md-3 col-lg-3">'+
-                    '<button type="button" class="close">'+
-                      '<span>×</span>'+
-                    '</button>'+
-                  '</div>'+
-                '</div>'+
-              '</div>'+
-              '<div class="modal-body text-center">'+
-                '<p>'+
-                  '<div ng-transclude></div>'+
-                '</p>'+
-              '</div>'+
-              '<div class="modal-footer">'+
-                '<button type="button" class="btn btn-orz">确定</button>'+
-              '</div>'+
+            '<div class="modal-header">'+
+            '<div class="row">'+
+            '<div class="col-md-9 col-lg-9">{{title}}</div>'+
+            '<div class="col-md-3 col-lg-3">'+
+            '<button type="button" class="close">'+
+            '<span>×</span>'+
+            '</button>'+
             '</div>'+
-          '</div>'+
-          '</div>'+
-      '<div class="modal-backdrop fade"></div>'
-      );
-      $templateCache.put('template/confirm.html',
-              '<div class="modal fade" style="display:block;">'+
-              '<div class="modal-dialog modal-sm">'+
-              '<div class="modal-content">'+
-              '<div class="modal-header">'+
-              '<div class="row">'+
-              '<div class="col-md-9 col-lg-9">{{title}}</div>'+
-              '<div class="col-md-3 col-lg-3">'+
-              '<button type="button" class="close">'+
-              '<span>×</span>'+
-              '</button>'+
-              '</div>'+
-              '</div>'+
-              '</div>'+
-              '<div class="modal-body text-center">'+
-              '<p>'+
-              '<div ng-transclude></div>'+
-              '</p>'+
-              '</div>'+
-              '<div class="modal-footer">'+
-              ' <button type="button" class="btn btn-orz">是</button>'+
-              ' <button type="button" class="btn btn-default btn-large" >否</button>'+
-              '</div>'+
-              '</div>'+
-              '</div>'+
-              '</div>'+
-              '<div class="modal-backdrop fade"></div>');
+            '</div>'+
+            '</div>'+
+            '<div class="modal-body text-center">'+
+            '<p>'+
+            '<div ng-transclude></div>'+
+            '</p>'+
+            '</div>'+
+            '<div class="modal-footer">'+
+            '<button type="button" class="btn btn-primary">确定</button>'+
+            '</div>'+
+            '</div>'+
+            '</div>'+
+            '</div>'+
+            '<div class="modal-backdrop fade"></div>'
+        );
+        $templateCache.put('template/confirm.html',
+            '<div class="modal fade" style="display:block;">'+
+            '<div class="modal-dialog modal-sm">'+
+            '<div class="modal-content">'+
+            '<div class="modal-header">'+
+            '<div class="row">'+
+            '<div class="col-md-9 col-lg-9">{{title}}</div>'+
+            '<div class="col-md-3 col-lg-3">'+
+            '<button type="button" class="close">'+
+            '<span>×</span>'+
+            '</button>'+
+            '</div>'+
+            '</div>'+
+            '</div>'+
+            '<div class="modal-body text-center">'+
+            '<p>'+
+            '<div ng-transclude></div>'+
+            '</p>'+
+            '</div>'+
+            '<div class="modal-footer">'+
+            ' <button type="button" class="btn btn-primary">是</button>'+
+            ' <button type="button" class="btn btn-danger" >否</button>'+
+            '</div>'+
+            '</div>'+
+            '</div>'+
+            '</div>'+
+            '<div class="modal-backdrop fade"></div>');
+
+        $templateCache.put('template/dialog.html',
+            '<div class="modal fade" style="display:block;">'+
+            '<div class="modal-dialog" style="width:100%; padding:0 50px">'+
+            '<div class="modal-content">'+
+            '<div class="modal-header" style="position: relative;">'+
+            '<h4>{{title}}</h4>'+
+            '<span class="glyphicon glyphicon-remove closeimg"></span>'+
+            '</div>'+
+            '<div class="modal-body text-center">'+
+            '<div ng-transclude></div>'+
+            '</div>'+
+            '</div>'+
+            '</div>'+
+            '</div>'+
+            '<div class="modal-backdrop fade"></div>'
+        );
 //      $templateCache.put('template/prompt.html',
 //              '<div class="modal fade" style="display:block;">'+
 //              '<div class="modal-dialog modal-sm">'+
@@ -867,9 +904,9 @@ angular.module('ui.website.dialog.directives', [])
 //              '<div class="modal-backdrop fade"></div>');
     }]);
 angular.module('ui.website.dialog.service', [])
-    .factory('DialogService', ['$document','$compile','$rootScope', function($document, $compile, $rootScope){
+    .factory('DialogService', ['$document','$compile','$rootScope', '$http', function($document, $compile, $rootScope, $http){
       return {
-        alert: function(content, title){
+        alert: function(title, content){
           var walert = $document.find('walert');
           if(walert.length == 0){
             walert = angular.element('<walert title="'+title+'">'+content+'</walert>');
@@ -885,7 +922,7 @@ angular.module('ui.website.dialog.service', [])
           scope.title = title;
           $compile(walert)(scope);
         },
-        confirm: function(content, success, title){
+        confirm: function(title, content, success){
           var wconfirm = $document.find('wconfirm');
           if(wconfirm.length == 0){
             wconfirm = angular.element('<wconfirm title="'+title+'" >'+content+'</wconfirm>');
@@ -928,9 +965,74 @@ angular.module('ui.website.dialog.service', [])
           scope.option = option;
           scope.title = option.title;
           $compile(wprompt)(scope);
+        },
+        dialog: function(title, templateUrl, scope){
+          // var scope = $rootScope.$new(false);
+          var dialog;
+          var dialog_id = uuid();
+          var html = $http.get(templateUrl).success(function(res){
+            dialog = angular.element('<dialog id>'+res + '</dialog>');
+            $document.find('body').append(dialog);
+            scope.title = title;
+            $compile(dialog)(scope);
+          })
+          return dialog_id;
         }
       }
     }])
+angular.module('ui.website.fileupload', [])
+.directive('fileUpload', ['$http', function ($http) {
+    return {
+        restrict: 'EA',
+        scope: {
+            url: '@',
+            success: '&',
+            multiple: '@',
+            failure: '&'
+        },
+        templateUrl: 'template/fileupload.html',
+        link: function(scope, ele, attrs, ctrls){
+            var files = ele.find('input')[0].files;
+            $http({
+                method:'POST',
+                url: scope.url,
+                headers: {
+                    'Content-Type': undefined
+                },
+                data: files,
+                transformRequest: function (data, headersGetter) {
+                    var formData = new FormData();
+                    angular.forEach(data, function (value, key) {
+                        formData.append(key, value);
+                    });
+                    return formData;
+                }
+            }).then(function(res){
+                if(res.status == 200){
+                    var data = res.data.data;
+                    // var images = [];
+                    // angular.forEach(data, function(value, index, context){
+                    //     images.push(value.url);
+                    // });
+                    // $scope.ad.images = images;
+                    // $scope.ad.category_id = $scope.childMenu;
+                    // return $http.put('/ad/admin/ad/add1', $scope.ad);
+                    scope.success(res.data.data);
+                } else {
+                    swal('文件上传失败,错误码为:', res.error.error_code + ', 错误原因:'+res.error.errorMsg);
+                    scope.failure(error);
+                }
+            })
+        }
+    }
+}]).run(['$templateCache', function ($templateCache) {
+    var html = [];
+    html.push('<div>');
+    html.push('<input class="form-control" style="width: 250px" type="file"/>')
+    // html.push('')
+    html.push('</div>');
+    $templateCache.put('template/fileupload.html', html.join(''));
+}]);
 /**
  * obj.time = '0.00'
  *  obj.currentPlayDuration = 0;
@@ -1182,3 +1284,16 @@ angular.module("ui.website.player",[])
           '</div>'+
       '</div>');
     }]);
+function uuid() {
+    var s = [];
+    var hexDigits = "0123456789abcdef";
+    for (var i = 0; i < 36; i++) {
+        s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+    }
+    s[14] = "4";  // bits 12-15 of the time_hi_and_version field to 0010
+    s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1);  // bits 6-7 of the clock_seq_hi_and_reserved to 01
+    s[8] = s[13] = s[18] = s[23] = "-";
+
+    var uuid = s.join("");
+    return uuid;
+}
