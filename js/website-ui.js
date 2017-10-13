@@ -1290,6 +1290,19 @@ angular.module("ui.website.player",[])
           '</div>'+
       '</div>');
     }]);
+function uuid() {
+    var s = [];
+    var hexDigits = "0123456789abcdef";
+    for (var i = 0; i < 36; i++) {
+        s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+    }
+    s[14] = "4";  // bits 12-15 of the time_hi_and_version field to 0010
+    s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1);  // bits 6-7 of the clock_seq_hi_and_reserved to 01
+    s[8] = s[13] = s[18] = s[23] = "-";
+
+    var uuid = s.join("");
+    return uuid;
+}
 angular.module('ui.website.select', [
     'ui.bootstrap',
     'ui.website.select.directives'
@@ -1328,10 +1341,10 @@ angular.module('ui.website.select.directives', ['ui.bootstrap.position'])
                             evt.stopPropagation();
                             var li = selectContainer.find('li');
                             if(li){
-                                var value = ele.find('div').html();
+                                var value = ngModelCtrl.$modelValue;
                                 li.removeClass('active');
                                 angular.forEach(li, function(obj, i){
-                                    if($(obj).find('a').html() === value){
+                                    if($(obj).attr('value') === value){
                                         $(obj).addClass('active');
                                     }
                                 })
@@ -1346,6 +1359,14 @@ angular.module('ui.website.select.directives', ['ui.bootstrap.position'])
 
                         scope.$watch('options', function(newValue){
                             if(newValue && newValue.length > 0){
+                                var value = ngModelCtrl.$modelValue;
+                                if(value){
+                                    angular.forEach(newValue, function(obj){
+                                        if(obj[scope.config.valueFieldName] === value){
+                                            ele.find('div').html(obj[scope.config.displayFieldName]);
+                                        }
+                                    })
+                                }
                                 $timeout(function(){
                                     var li = selectContainer.find('li');
                                     li.bind('click', function(evt){
@@ -1387,7 +1408,7 @@ angular.module('ui.website.select.directives', ['ui.bootstrap.position'])
     }])
     .run(['$templateCache', function ($templateCache) {
         var html = [];
-        html.push('<div class="pull-left" style="position: relative;">' +
+        html.push('<div style="position: relative;">' +
             // '<input type="text" style="border-radius: 4px" class="form-control" >' +
             '<div style="border-radius: 4px" class="form-control" ></div>' +
             '<i class="fa fa-sort" style="position: absolute;right: 5px;top: 0px;height: 100%;padding-top: 10px; transform: scaleX(0.8)"></i></div>');
@@ -1401,16 +1422,3 @@ angular.module('ui.website.select.directives', ['ui.bootstrap.position'])
             "</ul>\n" +
             "");
     }])
-function uuid() {
-    var s = [];
-    var hexDigits = "0123456789abcdef";
-    for (var i = 0; i < 36; i++) {
-        s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
-    }
-    s[14] = "4";  // bits 12-15 of the time_hi_and_version field to 0010
-    s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1);  // bits 6-7 of the clock_seq_hi_and_reserved to 01
-    s[8] = s[13] = s[18] = s[23] = "-";
-
-    var uuid = s.join("");
-    return uuid;
-}
