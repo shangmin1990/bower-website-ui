@@ -7,7 +7,8 @@ angular.module("ui.website",[
     'ui.website.dialog',
     'ui.website.chart',
     'ui.website.fileupload',
-    'ui.website.select'
+    'ui.website.select',
+    'ui.website.loading'
 ])
 /**
  * @Author benjamin zhaoyuxiang
@@ -636,6 +637,59 @@ angular.module("ui.website.chart",[])
     $templateCache.put('website-ui/chart/no-data.html', template.join(''));
 }]);
 
+angular.module('ui.website.fileupload', [])
+.directive('fileUpload', ['$http', function ($http) {
+    return {
+        restrict: 'EA',
+        scope: {
+            url: '@',
+            success: '&',
+            multiple: '@',
+            failure: '&'
+        },
+        templateUrl: 'template/fileupload.html',
+        link: function(scope, ele, attrs, ctrls){
+            var files = ele.find('input')[0].files;
+            $http({
+                method:'POST',
+                url: scope.url,
+                headers: {
+                    'Content-Type': undefined
+                },
+                data: files,
+                transformRequest: function (data, headersGetter) {
+                    var formData = new FormData();
+                    angular.forEach(data, function (value, key) {
+                        formData.append(key, value);
+                    });
+                    return formData;
+                }
+            }).then(function(res){
+                if(res.status == 200){
+                    var data = res.data.data;
+                    // var images = [];
+                    // angular.forEach(data, function(value, index, context){
+                    //     images.push(value.url);
+                    // });
+                    // $scope.ad.images = images;
+                    // $scope.ad.category_id = $scope.childMenu;
+                    // return $http.put('/ad/admin/ad/add1', $scope.ad);
+                    scope.success(res.data.data);
+                } else {
+                    swal('文件上传失败,错误码为:', res.error.error_code + ', 错误原因:'+res.error.errorMsg);
+                    scope.failure(error);
+                }
+            })
+        }
+    }
+}]).run(['$templateCache', function ($templateCache) {
+    var html = [];
+    html.push('<div>');
+    html.push('<input class="form-control" style="width: 250px" type="file"/>')
+    // html.push('')
+    html.push('</div>');
+    $templateCache.put('template/fileupload.html', html.join(''));
+}]);
 angular.module('ui.website.dialog', [
   'ui.website.dialog.service',
   'ui.website.dialog.directives'
@@ -986,208 +1040,104 @@ angular.module('ui.website.dialog.service', [])
         }
       }
     }])
-angular.module('ui.website.select', [
-    'ui.bootstrap',
-    'ui.website.select.directives'
-])
-angular.module('ui.website.select.directives', ['ui.bootstrap.position'])
-    .directive('wsSelect',['$compile', '$document', '$uibPosition', '$timeout', function($compile, $document, $uibPosition, $timeout){
+angular.module('ui.website.loading', [])
+    .factory('LoadingService', ['$rootScope', '$document', '$compile', '$timeout', function($rootScope, $document, $compile, $timeout){
         return {
-            restrict:'EA',
-            replace:true,
-            templateUrl:'template/wsSelect.html',
-            require: ['ngModel'],
-            transclude: true,
-            // templateUrl: 'uib/template/typeahead/typeahead-popup.html',
-            scope:{
-                options: '=?',
-                'onSelected': '&',
-                config: '@'
-            },
-            compile: function(ele, attrs, transclude){
-                return {
-                    pre: angular.noop ,
-                    post: function(scope, ele, attrs, ctrls){
-                        var ngModelCtrl = ctrls[0];
-
-                        scope.config = scope.config || {};
-                        scope.config.displayFieldName = scope.config.displayFieldName || 'key';
-                        scope.config.valueFieldName = scope.config.valueFieldName || 'value';
-
+            show: function (elementId, imageSrc) {
+                var ele = $document.find('#' + elementId);
+                if (ele.length > 0){
+                    var loadingEle = ele.find('ws-loading');
+                    if (loadingEle.length == 0){
                         var id = uuid();
-                        var unparseEle = angular.element('<div ws-select-container></div>');
-                        unparseEle.attr({
-                            id: id
-                        });
-                        var selectContainer = $compile(unparseEle)(scope);
-                        $timeout(function(){
-                            scope.containerStyle = {
-                                width: ele.width() + 'px'
-                            }
-                        }, 0)
-
-                        ele.append(selectContainer);
-                        // var position = $uibPosition.position(ele);
-                        // console.log(position);
-                        $(ele).bind('click', function(evt){
-                            evt.stopPropagation();
-                            var li = selectContainer.find('li');
-                            if(li){
-                                var value = ngModelCtrl.$modelValue;
-                                li.removeClass('active');
-                                angular.forEach(li, function(obj, i){
-                                    if($(obj).attr('value') === value){
-                                        $(obj).addClass('active');
-                                        scope.currentSelected = ngModelCtrl.$modelValue;
-                                    }
-                                })
-                            }
-                            selectContainer.show();
-                        });
-                        $document.bind('click', function (evt) {
-                            selectContainer.hide();
-                        });
-
-                        function render() {
-                            console.log('ngModel value changed!!!');
-                            var value = ngModelCtrl.$modelValue;
-                            scope.currentSelected = ngModelCtrl.$modelValue;
-                            angular.forEach(scope.options, function(obj){
-                                if(obj[scope.config.valueFieldName] === value){
-                                    ele.find('div').html(obj[scope.config.displayFieldName]);
-                                }
-                            })
-                            var li = selectContainer.find('li');
-                            if(li){
-                                li.removeClass('active');
-                                angular.forEach(li, function(obj, i){
-                                    if($(obj).attr('value') === value){
-                                        $(obj).addClass('active');
-                                    }
-                                })
-                            }
-                        };
-
-                        ngModelCtrl.$render = render;
-                        scope.$watch('options', function(newValue){
-                            if(newValue && newValue.length > 0){
-                                var value = ngModelCtrl.$modelValue;
-                                if(value){
-                                    angular.forEach(newValue, function(obj){
-                                        if(obj[scope.config.valueFieldName] === value){
-                                            ele.find('div').html(obj[scope.config.displayFieldName]);
-                                        }
-                                    })
-                                }
-                                $timeout(function(){
-
-                                    var li = selectContainer.find('li');
-
-                                    li.bind('click', onOptionSelected);
-
-                                    function onOptionSelected(evt){
-                                        var self_ = this;
-                                        scope.$evalAsync(function () {
-                                            onOptionSelectedInner(self_, evt);
-                                        })
-                                    }
-
-                                    var onOptionSelectedInner = function(self_, evt){
-                                        evt.stopPropagation();
-                                        li.removeClass('active');
-                                        $(self_).addClass('active');
-                                        selectContainer.hide();
-                                        selectContainer.css(
-                                            'display', 'none'
-                                        );
-                                        var display = $(self_).find('a').find('span').html();
-                                        ele.find('div').html(display);
-                                        var optionValue = $(self_).attr('value');
-                                        ngModelCtrl.$setViewValue(optionValue);
-                                        scope.currentSelected = optionValue;
-                                        scope.onSelected(value, evt);
-                                        console.log('changed: ', display, optionValue);
-                                    }
-
-
-                                    scope.clickCallback = function(value, evt){
-                                        //TODO 代码要重写
-                                        var target = evt.target;
-                                        if(target.tagName.toLowerCase() == 'a'){
-                                            target = $(target).parent();
-                                        }
-                                        var li = target, self_ = target;
-                                        evt.stopPropagation();
-                                        li.removeClass('active');
-                                        $(self_).addClass('active');
-                                        selectContainer.hide();
-                                        selectContainer.css(
-                                            'display', 'none'
-                                        );
-                                        var display = $(self_).find('a').find('span').html();
-                                        ele.find('div').html(display);
-                                        var optionValue = $(self_).attr('value');
-                                        ngModelCtrl.$setViewValue(optionValue);
-                                        scope.currentSelected = optionValue;
-                                        scope.onSelected(value, evt);
-                                        console.log('changed: ', display, optionValue);
-
-                                    }
-                                    li.bind('mouseenter', function(evt){
-                                        var self_ = this;
-                                        li.removeClass('active');
-                                        $(self_).addClass('active');
-                                    })
-                                }, 0)
-                            }
-                        }, true);
-
-                        if(attrs.options === undefined){
-                            var options = ele.find('option');
-                            if(options.length == 0){
-                                throw new Error('options参数没有设置,并且没有找到option元素!!!')
-                            }
-                            console.log("use option html, options size:" + options.length);
-                            var optionsArr = [];
-                            angular.forEach(options, function(optionEle, i){
-                                var optionItem = {};
-                                optionItem[scope.config.valueFieldName] = $(optionEle).attr("value");
-                                optionItem[scope.config.displayFieldName] = $(optionEle).html();
-                                optionsArr.push(optionItem);
-                            })
-                            scope.options = optionsArr;
-                        }
+                        var loadingDirective = angular.element('<ws-loading loading-img="'+imageSrc+'"></ws-loading>');
+                        loadingDirective.attr('id', id);
+                        ele.prepend(loadingDirective);
+                        var scope = $rootScope.$new(true);
+                        loadingEle = $compile(loadingDirective)(scope);
                     }
+                    $timeout(function () {
+                        loadingEle.find('div').show();
+                    }, 0)
+                    return loadingEle.attr('id');
+                } else {
+                    console.error("LoadingService : no element found!!!")
                 }
+            },
+            hide: function (elementId) {
+                var ele = $document.find('#' + elementId);
+                var loadingEle = ele.find('ws-loading');
+                loadingEle.remove();
             }
         }
     }])
-    .directive('wsSelectContainer', [function () {
+    .directive('wsLoading', ['$timeout', '$rootScope', function($timeout, $rootScope){
+        function link(scope, ele, attr, ctrl) {
+            scope.status = 'loading';
+            $rootScope.$on('$wsLoading:loadSuccess', function (evt, id) {
+                scope.status = 'success';
+                if(ele.attr('id') == id){
+                    ele.remove();
+                }
+            });
+
+            $rootScope.$on('$wsLoading:loadError', function (evt, id) {
+                scope.status = 'error';
+                if(ele.attr('id') == id){
+                    ele.remove();
+                }
+            });
+
+            $rootScope.$on('$wsLoading:loadNoData', function (evt, id) {
+                scope.status = 'noData';
+                if(ele.attr('id') == id){
+                    ele.remove();
+                }
+            });
+        }
+
         return {
-            restrict: 'EA',
-            replace: true,
-            templateUrl: 'template/wsSelectContainer.html',
+            restrict:'EA',
+            transclude: true,
+            templateUrl:'template/ws-loading.html',
+            scope:{
+                loadingImg: '@',
+                noDataImg: '@',
+                loadErrorImg: '@'
+            },
+            compile: function (ele, attrs, transclude) {
+                $timeout(function () {
+                    var parent = ele.parent();
+                    var width = parent.width();
+                    var minHeight = 100;
+                    var height = parent.height() >= minHeight ? parent.height(): minHeight;
+                    var children = ele.children();
+                    $(children[0]).css({
+                        height: height + 'px',
+                        width: width + 'px'
+                    });
+                    ele.css({
+                        height: height + 'px',
+                        width: width + 'px',
+                        position: 'absolute',
+                        'zIndex': 101,
+                        background: '#fff'
+                    });
+                }, 0);
+                return link;
+            }
         }
     }])
-    .run(['$templateCache', function ($templateCache) {
+    .run(['$templateCache', function($templateCache){
         var html = [];
-        html.push('<div style="position: relative;">' +
-            // '<input type="text" style="border-radius: 4px" class="form-control" >' +
-            '<div style="border-radius: 4px" class="form-control" ></div>' +
-            '<i class="fa fa-sort" style="position: absolute;right: 5px;top: 0px;height: 100%;padding-top: 10px; transform: scaleX(0.8)"></i>' +
-            '<div role="options" style="display: none" ng-transclude></div>'+
-            '</div>');
-        $templateCache.put('template/wsSelect.html', html.join(''));
-
-        // ng-click=\"clickCallback(option.value, $event)\"
-        $templateCache.put("template/wsSelectContainer.html",
-            "<ul class=\"dropdown-menu\" ng-style='containerStyle' style='max-width: 800px;max-height: 400px;overflow-y: scroll;box-shadow: 0 6px 12px rgba(0,0,0,.175);border: 1px solid #ccc;'>\n" +
-            "    <li class=\"ws-select-option\" value='{{option[config.valueFieldName]}}' ng-repeat=\"option in options track by $index\"  role=\"option\" >\n" +
-            "        <a style='padding-left: 5px'><i style='margin-right: 5px;visibility: {{option[config.valueFieldName] == currentSelected ? \"visible\" : \"hidden\"}}' class='fa fa-check'></i><span>{{option[config.displayFieldName]}}</span></a>" +
-            "    </li>\n" +
-            "</ul>\n" +
-            "");
-    }])
+        html.push('<div style="position: relative; display: none"><div style="display:inline-block;position:absolute; top:50%; left:50%; transform: translate(-50%, -50%);" >');
+        html.push('<img ng-if="status == \'loading\'" ng-src="{{$parent.loadingImg}}"/>')
+        html.push('<img ng-if="status == \'success\'" ng-src="{{$parent.successImg}}"/>')
+        html.push('<img ng-if="status == \'error\'" ng-src="{{$parent.errorImg}}"/>')
+        html.push('<img ng-if="status == \'noData\'" ng-src="{{$parent.noDataImg}}"/>')
+        html.push('</div>')
+        html.push('</div>');
+        $templateCache.put('template/ws-loading.html', html.join(''));
+    }]);
 /**
  * obj.time = '0.00'
  *  obj.currentPlayDuration = 0;
@@ -1439,6 +1389,208 @@ angular.module("ui.website.player",[])
           '</div>'+
       '</div>');
     }]);
+angular.module('ui.website.select', [
+    'ui.bootstrap',
+    'ui.website.select.directives'
+])
+angular.module('ui.website.select.directives', ['ui.bootstrap.position'])
+    .directive('wsSelect',['$compile', '$document', '$uibPosition', '$timeout', function($compile, $document, $uibPosition, $timeout){
+        return {
+            restrict:'EA',
+            replace:true,
+            templateUrl:'template/wsSelect.html',
+            require: ['ngModel'],
+            transclude: true,
+            // templateUrl: 'uib/template/typeahead/typeahead-popup.html',
+            scope:{
+                options: '=?',
+                'onSelected': '&',
+                config: '@'
+            },
+            compile: function(ele, attrs, transclude){
+                return {
+                    pre: angular.noop ,
+                    post: function(scope, ele, attrs, ctrls){
+                        var ngModelCtrl = ctrls[0];
+
+                        scope.config = scope.config || {};
+                        scope.config.displayFieldName = scope.config.displayFieldName || 'key';
+                        scope.config.valueFieldName = scope.config.valueFieldName || 'value';
+
+                        var id = uuid();
+                        var unparseEle = angular.element('<div ws-select-container></div>');
+                        unparseEle.attr({
+                            id: id
+                        });
+                        var selectContainer = $compile(unparseEle)(scope);
+                        $timeout(function(){
+                            scope.containerStyle = {
+                                width: ele.width() + 'px'
+                            }
+                        }, 0)
+
+                        ele.append(selectContainer);
+                        // var position = $uibPosition.position(ele);
+                        // console.log(position);
+                        $(ele).bind('click', function(evt){
+                            evt.stopPropagation();
+                            var li = selectContainer.find('li');
+                            if(li){
+                                var value = ngModelCtrl.$modelValue;
+                                li.removeClass('active');
+                                angular.forEach(li, function(obj, i){
+                                    if($(obj).attr('value') === value){
+                                        $(obj).addClass('active');
+                                        scope.currentSelected = ngModelCtrl.$modelValue;
+                                    }
+                                })
+                            }
+                            selectContainer.show();
+                        });
+                        $document.bind('click', function (evt) {
+                            selectContainer.hide();
+                        });
+
+                        function render() {
+                            console.log('ngModel value changed!!!');
+                            var value = ngModelCtrl.$modelValue;
+                            scope.currentSelected = ngModelCtrl.$modelValue;
+                            angular.forEach(scope.options, function(obj){
+                                if(obj[scope.config.valueFieldName] === value){
+                                    ele.find('div').html(obj[scope.config.displayFieldName]);
+                                }
+                            })
+                            var li = selectContainer.find('li');
+                            if(li){
+                                li.removeClass('active');
+                                angular.forEach(li, function(obj, i){
+                                    if($(obj).attr('value') === value){
+                                        $(obj).addClass('active');
+                                    }
+                                })
+                            }
+                        };
+
+                        ngModelCtrl.$render = render;
+                        scope.$watch('options', function(newValue){
+                            if(newValue && newValue.length > 0){
+                                var value = ngModelCtrl.$modelValue;
+                                if(value){
+                                    angular.forEach(newValue, function(obj){
+                                        if(obj[scope.config.valueFieldName] === value){
+                                            ele.find('div').html(obj[scope.config.displayFieldName]);
+                                        }
+                                    })
+                                }
+                                $timeout(function(){
+
+                                    var li = selectContainer.find('li');
+
+                                    li.bind('click', onOptionSelected);
+
+                                    function onOptionSelected(evt){
+                                        var self_ = this;
+                                        scope.$evalAsync(function () {
+                                            onOptionSelectedInner(self_, evt);
+                                        })
+                                    }
+
+                                    var onOptionSelectedInner = function(self_, evt){
+                                        evt.stopPropagation();
+                                        li.removeClass('active');
+                                        $(self_).addClass('active');
+                                        selectContainer.hide();
+                                        selectContainer.css(
+                                            'display', 'none'
+                                        );
+                                        var display = $(self_).find('a').find('span').html();
+                                        ele.find('div').html(display);
+                                        var optionValue = $(self_).attr('value');
+                                        ngModelCtrl.$setViewValue(optionValue);
+                                        scope.currentSelected = optionValue;
+                                        scope.onSelected(value, evt);
+                                        console.log('changed: ', display, optionValue);
+                                    }
+
+
+                                    scope.clickCallback = function(value, evt){
+                                        //TODO 代码要重写
+                                        var target = evt.target;
+                                        if(target.tagName.toLowerCase() == 'a'){
+                                            target = $(target).parent();
+                                        }
+                                        var li = target, self_ = target;
+                                        evt.stopPropagation();
+                                        li.removeClass('active');
+                                        $(self_).addClass('active');
+                                        selectContainer.hide();
+                                        selectContainer.css(
+                                            'display', 'none'
+                                        );
+                                        var display = $(self_).find('a').find('span').html();
+                                        ele.find('div').html(display);
+                                        var optionValue = $(self_).attr('value');
+                                        ngModelCtrl.$setViewValue(optionValue);
+                                        scope.currentSelected = optionValue;
+                                        scope.onSelected(value, evt);
+                                        console.log('changed: ', display, optionValue);
+
+                                    }
+                                    li.bind('mouseenter', function(evt){
+                                        var self_ = this;
+                                        li.removeClass('active');
+                                        $(self_).addClass('active');
+                                    })
+                                }, 0)
+                            }
+                        }, true);
+
+                        if(attrs.options === undefined){
+                            var options = ele.find('option');
+                            if(options.length == 0){
+                                throw new Error('options参数没有设置,并且没有找到option元素!!!')
+                            }
+                            console.log("use option html, options size:" + options.length);
+                            var optionsArr = [];
+                            angular.forEach(options, function(optionEle, i){
+                                var optionItem = {};
+                                optionItem[scope.config.valueFieldName] = $(optionEle).attr("value");
+                                optionItem[scope.config.displayFieldName] = $(optionEle).html();
+                                optionsArr.push(optionItem);
+                            })
+                            scope.options = optionsArr;
+                        }
+                    }
+                }
+            }
+        }
+    }])
+    .directive('wsSelectContainer', [function () {
+        return {
+            restrict: 'EA',
+            replace: true,
+            templateUrl: 'template/wsSelectContainer.html',
+        }
+    }])
+    .run(['$templateCache', function ($templateCache) {
+        var html = [];
+        html.push('<div style="position: relative;">' +
+            // '<input type="text" style="border-radius: 4px" class="form-control" >' +
+            '<div style="border-radius: 4px" class="form-control" ></div>' +
+            '<i class="fa fa-sort" style="position: absolute;right: 5px;top: 0px;height: 100%;padding-top: 10px; transform: scaleX(0.8)"></i>' +
+            '<div role="options" style="display: none" ng-transclude></div>'+
+            '</div>');
+        $templateCache.put('template/wsSelect.html', html.join(''));
+
+        // ng-click=\"clickCallback(option.value, $event)\"
+        $templateCache.put("template/wsSelectContainer.html",
+            "<ul class=\"dropdown-menu\" ng-style='containerStyle' style='max-width: 800px;max-height: 400px;overflow-y: scroll;box-shadow: 0 6px 12px rgba(0,0,0,.175);border: 1px solid #ccc;'>\n" +
+            "    <li class=\"ws-select-option\" value='{{option[config.valueFieldName]}}' ng-repeat=\"option in options track by $index\"  role=\"option\" >\n" +
+            "        <a style='padding-left: 5px'><i style='margin-right: 5px;visibility: {{option[config.valueFieldName] == currentSelected ? \"visible\" : \"hidden\"}}' class='fa fa-check'></i><span>{{option[config.displayFieldName]}}</span></a>" +
+            "    </li>\n" +
+            "</ul>\n" +
+            "");
+    }])
 function uuid() {
     var s = [];
     var hexDigits = "0123456789abcdef";
@@ -1452,56 +1604,3 @@ function uuid() {
     var uuid = s.join("");
     return uuid;
 }
-angular.module('ui.website.fileupload', [])
-.directive('fileUpload', ['$http', function ($http) {
-    return {
-        restrict: 'EA',
-        scope: {
-            url: '@',
-            success: '&',
-            multiple: '@',
-            failure: '&'
-        },
-        templateUrl: 'template/fileupload.html',
-        link: function(scope, ele, attrs, ctrls){
-            var files = ele.find('input')[0].files;
-            $http({
-                method:'POST',
-                url: scope.url,
-                headers: {
-                    'Content-Type': undefined
-                },
-                data: files,
-                transformRequest: function (data, headersGetter) {
-                    var formData = new FormData();
-                    angular.forEach(data, function (value, key) {
-                        formData.append(key, value);
-                    });
-                    return formData;
-                }
-            }).then(function(res){
-                if(res.status == 200){
-                    var data = res.data.data;
-                    // var images = [];
-                    // angular.forEach(data, function(value, index, context){
-                    //     images.push(value.url);
-                    // });
-                    // $scope.ad.images = images;
-                    // $scope.ad.category_id = $scope.childMenu;
-                    // return $http.put('/ad/admin/ad/add1', $scope.ad);
-                    scope.success(res.data.data);
-                } else {
-                    swal('文件上传失败,错误码为:', res.error.error_code + ', 错误原因:'+res.error.errorMsg);
-                    scope.failure(error);
-                }
-            })
-        }
-    }
-}]).run(['$templateCache', function ($templateCache) {
-    var html = [];
-    html.push('<div>');
-    html.push('<input class="form-control" style="width: 250px" type="file"/>')
-    // html.push('')
-    html.push('</div>');
-    $templateCache.put('template/fileupload.html', html.join(''));
-}]);
