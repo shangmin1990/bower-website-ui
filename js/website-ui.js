@@ -647,59 +647,6 @@ angular.module("ui.website.chart",[])
     $templateCache.put('website-ui/chart/no-data.html', template.join(''));
 }]);
 
-angular.module('ui.website.fileupload', [])
-.directive('fileUpload', ['$http', function ($http) {
-    return {
-        restrict: 'EA',
-        scope: {
-            url: '@',
-            success: '&',
-            multiple: '@',
-            failure: '&'
-        },
-        templateUrl: 'template/fileupload.html',
-        link: function(scope, ele, attrs, ctrls){
-            var files = ele.find('input')[0].files;
-            $http({
-                method:'POST',
-                url: scope.url,
-                headers: {
-                    'Content-Type': undefined
-                },
-                data: files,
-                transformRequest: function (data, headersGetter) {
-                    var formData = new FormData();
-                    angular.forEach(data, function (value, key) {
-                        formData.append(key, value);
-                    });
-                    return formData;
-                }
-            }).then(function(res){
-                if(res.status == 200){
-                    var data = res.data.data;
-                    // var images = [];
-                    // angular.forEach(data, function(value, index, context){
-                    //     images.push(value.url);
-                    // });
-                    // $scope.ad.images = images;
-                    // $scope.ad.category_id = $scope.childMenu;
-                    // return $http.put('/ad/admin/ad/add1', $scope.ad);
-                    scope.success(res.data.data);
-                } else {
-                    swal('文件上传失败,错误码为:', res.error.error_code + ', 错误原因:'+res.error.errorMsg);
-                    scope.failure(error);
-                }
-            })
-        }
-    }
-}]).run(['$templateCache', function ($templateCache) {
-    var html = [];
-    html.push('<div>');
-    html.push('<input class="form-control" style="width: 250px" type="file"/>')
-    // html.push('')
-    html.push('</div>');
-    $templateCache.put('template/fileupload.html', html.join(''));
-}]);
 angular.module('ui.website.dialog', [
   'ui.website.dialog.service',
   'ui.website.dialog.directives'
@@ -1050,6 +997,59 @@ angular.module('ui.website.dialog.service', [])
         }
       }
     }])
+angular.module('ui.website.fileupload', [])
+.directive('fileUpload', ['$http', function ($http) {
+    return {
+        restrict: 'EA',
+        scope: {
+            url: '@',
+            success: '&',
+            multiple: '@',
+            failure: '&'
+        },
+        templateUrl: 'template/fileupload.html',
+        link: function(scope, ele, attrs, ctrls){
+            var files = ele.find('input')[0].files;
+            $http({
+                method:'POST',
+                url: scope.url,
+                headers: {
+                    'Content-Type': undefined
+                },
+                data: files,
+                transformRequest: function (data, headersGetter) {
+                    var formData = new FormData();
+                    angular.forEach(data, function (value, key) {
+                        formData.append(key, value);
+                    });
+                    return formData;
+                }
+            }).then(function(res){
+                if(res.status == 200){
+                    var data = res.data.data;
+                    // var images = [];
+                    // angular.forEach(data, function(value, index, context){
+                    //     images.push(value.url);
+                    // });
+                    // $scope.ad.images = images;
+                    // $scope.ad.category_id = $scope.childMenu;
+                    // return $http.put('/ad/admin/ad/add1', $scope.ad);
+                    scope.success(res.data.data);
+                } else {
+                    swal('文件上传失败,错误码为:', res.error.error_code + ', 错误原因:'+res.error.errorMsg);
+                    scope.failure(error);
+                }
+            })
+        }
+    }
+}]).run(['$templateCache', function ($templateCache) {
+    var html = [];
+    html.push('<div>');
+    html.push('<input class="form-control" style="width: 250px" type="file"/>')
+    // html.push('')
+    html.push('</div>');
+    $templateCache.put('template/fileupload.html', html.join(''));
+}]);
 angular.module('ui.website.loading', [])
     .factory('LoadingService', ['$rootScope', '$document', '$compile', '$timeout', function($rootScope, $document, $compile, $timeout){
         return {
@@ -1068,6 +1068,7 @@ angular.module('ui.website.loading', [])
                         var scope = $rootScope.$new(true);
                         loadingEle = $compile(loadingDirective)(scope);
                     }
+                    this.initSize(ele);
                     $timeout(function () {
                         loadingEle.show();
                         loadingEle.find('div').show();
@@ -1084,6 +1085,21 @@ angular.module('ui.website.loading', [])
             hideUseElement: function (ele) {
                 var loadingEle = ele.find('ws-loading');
                 loadingEle.hide();
+            },
+            initSize: function (ele) {
+                var parent = ele.parent();
+                var width = parent.width();
+                var minHeight = 100;
+                var height = parent.height() >= minHeight ? parent.height(): minHeight;
+                var children = ele.children();
+                $(children[0]).css({
+                    height: height + 'px',
+                    width: width + 'px'
+                });
+                ele.css({
+                    height: height + 'px',
+                    width: width + 'px'
+                });
             }
         }
     }])
@@ -1095,9 +1111,13 @@ angular.module('ui.website.loading', [])
             scope.$watch('promise.$$state.status', function (newValue, oldValue) {
                 if (newValue !== undefined){
                     if (newValue === 0){
-                        LoadingService.showUseElement(ele.parent(), scope.loadingImg);
+                        $timeout(function () {
+                            LoadingService.showUseElement(ele.parent(), scope.loadingImg);
+                        }, 0);
                     } else {
-                        LoadingService.hideUseElement(ele.parent(), scope.loadingImg);
+                        $timeout(function () {
+                            LoadingService.hideUseElement(ele.parent(), scope.loadingImg);
+                        }, 0)
                     }
                 }
             });
@@ -1136,18 +1156,8 @@ angular.module('ui.website.loading', [])
             },
             compile: function (ele, attrs, transclude) {
                 $timeout(function () {
-                    var parent = ele.parent();
-                    var width = parent.width();
-                    var minHeight = 100;
-                    var height = parent.height() >= minHeight ? parent.height(): minHeight;
-                    var children = ele.children();
-                    $(children[0]).css({
-                        height: height + 'px',
-                        width: width + 'px'
-                    });
+                    LoadingService.initSize(ele);
                     ele.css({
-                        height: height + 'px',
-                        width: width + 'px',
                         position: 'absolute',
                         'zIndex': 101,
                         background: '#fff'
