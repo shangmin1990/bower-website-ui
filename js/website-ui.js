@@ -539,7 +539,8 @@ angular.module("ui.website.chart",[])
                 tooltipFormatter: '&',
                 // 更新数据时, legend没有更新,setOption(o, true);
                 // @ http://echarts.baidu.com/api.html#echartsInstance.setOption
-                updateNotMerge: '@'
+                updateNotMerge: '@',
+                promise: '='
             },
             templateUrl: 'website-ui/chart/no-data.html',
             replace: false,
@@ -578,7 +579,11 @@ angular.module("ui.website.chart",[])
                     function echartsInit(){
                         var chart_dom = ele.find('div').find('div')[0];
                         //alert(chart_dom.id);
-                        var chartInstance = ChartService.getInstance(chart_dom, scope.chart, chartType);
+                        var chartInstance = echarts.getInstanceByDom(chart_dom);
+                        if (chartInstance){
+                            chartInstance.dispose();
+                        }
+                        chartInstance = ChartService.getInstance(chart_dom, scope.chart, chartType);
                         if(scope.eventType && scope.eventHandler){
                             chartInstance.on(scope.eventType, function(param){
                                 scope.eventHandler()(param);
@@ -586,26 +591,31 @@ angular.module("ui.website.chart",[])
                             });
                             console.log('绑定事件成功');
                         }
-                        scope.$on('chart:resize', function(){
+
+                        window.onresize = function (evt) {
                             chartInstance.resize();
-                        });
-                        if(config.showLoading){
-                            chartInstance.showLoading();
                         }
-                        scope.$on('chart:loading', function(){
-                            scope.noData = false;
-                            chartInstance.showLoading();
-                        });
+                        // if(config.showLoading){
+                        //     chartInstance.showLoading();
+                        // }
                         return chartInstance;
                     }
+
+                    scope.$watch('promise.$$state.status', function (newValue, oldValue) {
+                        if (newValue !== undefined){
+                            if (newValue === 0){
+                                /**
+                                 * 重新加载
+                                 * @type {boolean}
+                                 */
+                                scope.noData = false;
+                                chartInstance.showLoading();
+                            }
+                        }
+                    })
                     var chartInstance = echartsInit();
                     scope.$watch('chartData', function(newValue, oldValue){
                         if(newValue !== undefined){
-                            if(newValue == 'chart:loading'){
-                                scope.noData = false;
-                                chartInstance.showLoading();
-                                return;
-                            }
                             try{
                                 var option = ChartService.getOption(scope.chart, newValue, style_extend, scope.tooltipFormatter, config);
                                 chartInstance.hideLoading();
@@ -1045,6 +1055,9 @@ angular.module('ui.website.loading', [])
         return {
             show: function (elementId, imageSrc) {
                 var ele = $document.find('#' + elementId);
+                this.showUseElement(ele);
+            },
+            showUseElement: function (ele, imageSrc) {
                 if (ele.length > 0){
                     var loadingEle = ele.find('ws-loading');
                     if (loadingEle.length == 0){
@@ -1056,6 +1069,7 @@ angular.module('ui.website.loading', [])
                         loadingEle = $compile(loadingDirective)(scope);
                     }
                     $timeout(function () {
+                        loadingEle.show();
                         loadingEle.find('div').show();
                     }, 0)
                     return loadingEle.attr('id');
@@ -1065,34 +1079,49 @@ angular.module('ui.website.loading', [])
             },
             hide: function (elementId) {
                 var ele = $document.find('#' + elementId);
+                this.hideUseElement(ele);
+            },
+            hideUseElement: function (ele) {
                 var loadingEle = ele.find('ws-loading');
-                loadingEle.remove();
+                loadingEle.hide();
             }
         }
     }])
-    .directive('wsLoading', ['$timeout', '$rootScope', function($timeout, $rootScope){
+    .directive('wsLoading', ['$timeout', '$rootScope', 'LoadingService', function($timeout, $rootScope, LoadingService){
         function link(scope, ele, attr, ctrl) {
+
             scope.status = 'loading';
-            $rootScope.$on('$wsLoading:loadSuccess', function (evt, id) {
-                scope.status = 'success';
-                if(ele.attr('id') == id){
-                    ele.remove();
+
+            scope.$watch('promise.$$state.status', function (newValue, oldValue) {
+                if (newValue !== undefined){
+                    if (newValue === 0){
+                        LoadingService.showUseElement(ele.parent(), scope.loadingImg);
+                    } else {
+                        LoadingService.hideUseElement(ele.parent(), scope.loadingImg);
+                    }
                 }
             });
 
-            $rootScope.$on('$wsLoading:loadError', function (evt, id) {
-                scope.status = 'error';
-                if(ele.attr('id') == id){
-                    ele.remove();
-                }
-            });
-
-            $rootScope.$on('$wsLoading:loadNoData', function (evt, id) {
-                scope.status = 'noData';
-                if(ele.attr('id') == id){
-                    ele.remove();
-                }
-            });
+            // $rootScope.$on('$wsLoading:loadSuccess', function (evt, id) {
+            //     scope.status = 'success';
+            //     if(ele.attr('id') == id){
+            //         ele.remove();
+            //     }
+            // });
+            //
+            // $rootScope.$on('$wsLoading:loadError', function (evt, id) {
+            //     scope.status = 'error';
+            //     if(ele.attr('id') == id){
+            //         ele.remove();
+            //     }
+            // });
+            //
+            // $rootScope.$on('$wsLoading:loadNoData', function (evt, id) {
+            //     scope.status = 'noData';
+            //     if(ele.attr('id') == id){
+            //         ele.remove();
+            //     }
+            // });
         }
 
         return {
@@ -1102,7 +1131,8 @@ angular.module('ui.website.loading', [])
             scope:{
                 loadingImg: '@',
                 noDataImg: '@',
-                loadErrorImg: '@'
+                loadErrorImg: '@',
+                promise: '='
             },
             compile: function (ele, attrs, transclude) {
                 $timeout(function () {
