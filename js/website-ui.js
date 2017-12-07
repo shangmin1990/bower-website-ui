@@ -501,7 +501,7 @@ angular.module("ui.website.chart",[])
             }
         }
     }])
-    .directive('chart', ['ChartService', function(ChartService){
+    .directive('chart', ['ChartService', '$timeout', function(ChartService, $timeout){
         var defaultConfig = {
             // 是否显示loading画面
             showLoading: true,
@@ -614,9 +614,18 @@ angular.module("ui.website.chart",[])
                         }
                     })
                     var chartInstance = echartsInit();
-                    scope.$watch('chartData', function(newValue, oldValue){
+
+                    var running = false;
+
+                    function paint(newValue) {
                         if(newValue !== undefined){
                             try{
+                                if(newValue.status === 'error'){
+                                    chartInstance.hideLoading();
+                                    chartInstance.clear();
+                                    scope.noData = true;
+                                    return;
+                                }
                                 var option = ChartService.getOption(scope.chart, newValue, style_extend, scope.tooltipFormatter, config);
                                 chartInstance.hideLoading();
                                 var updateNotMerge = false;
@@ -633,7 +642,43 @@ angular.module("ui.website.chart",[])
                                 chartInstance.hideLoading();
                             }
                         }
+                    }
+
+                    scope.$watch('chartData', function(newValue, oldValue){
+                        if (newValue !== undefined){
+                            // console.log("值比较");
+                            // console.log("旧值:" + oldValue + ",新值" + newValue)
+                            if (!running){
+                                running = true;
+                                paint(newValue);
+                                $timeout(function () {
+                                    running = false;
+                                }, 0);
+                            } else {
+                                // console.log("值比较, 正在运行")
+                            }
+                        }
+
                     }, true);
+
+                    /**
+                     * 解决 如果图表重新加载 还是加载不到数据 则无法触发上边的$watch函数 原因(值比较 一直是false 则无法触发)
+                     */
+                    scope.$watch('chartData', function(newValue, oldValue){
+                        if (newValue !== undefined){
+                            // console.log("引用比较")
+                            // console.log("旧值:" + oldValue + ",新值" + newValue)
+                            if (!running){
+                                running = true;
+                                paint(newValue);
+                                $timeout(function () {
+                                    running = false;
+                                }, 0);
+                            } else {
+                                // console.log("引用比较, 正在运行")
+                            }
+                        }
+                    });
                 }
             }
         }
@@ -1068,7 +1113,10 @@ angular.module('ui.website.loading', [])
                         var scope = $rootScope.$new(true);
                         loadingEle = $compile(loadingDirective)(scope);
                     }
-                    this.initSize(ele);
+
+                    this.initSize(loadingEle);
+                    $(ele.children()[1]).hide();
+
                     $timeout(function () {
                         loadingEle.show();
                         loadingEle.find('div').show();
@@ -1085,6 +1133,7 @@ angular.module('ui.website.loading', [])
             hideUseElement: function (ele) {
                 var loadingEle = ele.find('ws-loading');
                 loadingEle.hide();
+                $(ele.children()[1]).show();
             },
             initSize: function (ele) {
                 var parent = ele.parent();
@@ -1111,13 +1160,9 @@ angular.module('ui.website.loading', [])
             scope.$watch('promise.$$state.status', function (newValue, oldValue) {
                 if (newValue !== undefined){
                     if (newValue === 0){
-                        $timeout(function () {
-                            LoadingService.showUseElement(ele.parent(), scope.loadingImg);
-                        }, 0);
+                        LoadingService.showUseElement(ele.parent(), scope.loadingImg);
                     } else {
-                        $timeout(function () {
-                            LoadingService.hideUseElement(ele.parent(), scope.loadingImg);
-                        }, 0)
+                        LoadingService.hideUseElement(ele.parent(), scope.loadingImg);
                     }
                 }
             });
