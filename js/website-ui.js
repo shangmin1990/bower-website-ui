@@ -16,6 +16,22 @@ angular.module("ui.website",[
  * @Date 2016-04-15
  */
 angular.module("ui.website.chart",[])
+    .factory('EChartsService', function () {
+        return {
+            getEChartsInstance: function (id) {
+                var $ele = angular.element('#' + id);
+                var $divs = $ele.find('div');
+                if ($divs.length > 0){
+                    for (var i = 0; i < $divs.length; i++){
+                        var child = $divs[i];
+                        if (child.hasAttribute('_echarts_instance_')){
+                            return echarts.getInstanceByDom(child);
+                        }
+                    }
+                }
+            }
+        }
+    })
     .service('ChartService', [function(){
         /**
          * highcharts 类型
@@ -1042,187 +1058,6 @@ angular.module('ui.website.dialog.service', [])
         }
       }
     }])
-angular.module('ui.website.fileupload', [])
-.directive('fileUpload', ['$http', function ($http) {
-    return {
-        restrict: 'EA',
-        scope: {
-            url: '@',
-            success: '&',
-            multiple: '@',
-            failure: '&'
-        },
-        templateUrl: 'template/fileupload.html',
-        link: function(scope, ele, attrs, ctrls){
-            var files = ele.find('input')[0].files;
-            $http({
-                method:'POST',
-                url: scope.url,
-                headers: {
-                    'Content-Type': undefined
-                },
-                data: files,
-                transformRequest: function (data, headersGetter) {
-                    var formData = new FormData();
-                    angular.forEach(data, function (value, key) {
-                        formData.append(key, value);
-                    });
-                    return formData;
-                }
-            }).then(function(res){
-                if(res.status == 200){
-                    var data = res.data.data;
-                    // var images = [];
-                    // angular.forEach(data, function(value, index, context){
-                    //     images.push(value.url);
-                    // });
-                    // $scope.ad.images = images;
-                    // $scope.ad.category_id = $scope.childMenu;
-                    // return $http.put('/ad/admin/ad/add1', $scope.ad);
-                    scope.success(res.data.data);
-                } else {
-                    swal('文件上传失败,错误码为:', res.error.error_code + ', 错误原因:'+res.error.errorMsg);
-                    scope.failure(error);
-                }
-            })
-        }
-    }
-}]).run(['$templateCache', function ($templateCache) {
-    var html = [];
-    html.push('<div>');
-    html.push('<input class="form-control" style="width: 250px" type="file"/>')
-    // html.push('')
-    html.push('</div>');
-    $templateCache.put('template/fileupload.html', html.join(''));
-}]);
-angular.module('ui.website.loading', [])
-    .factory('LoadingService', ['$rootScope', '$document', '$compile', '$timeout', function($rootScope, $document, $compile, $timeout){
-        return {
-            show: function (elementId, imageSrc) {
-                var ele = $document.find('#' + elementId);
-                this.showUseElement(ele);
-            },
-            showUseElement: function (ele, imageSrc) {
-                if (ele.length > 0){
-                    var loadingEle = ele.find('ws-loading');
-                    if (loadingEle.length == 0){
-                        var id = uuid();
-                        var loadingDirective = angular.element('<ws-loading loading-img="'+imageSrc+'"></ws-loading>');
-                        loadingDirective.attr('id', id);
-                        ele.prepend(loadingDirective);
-                        var scope = $rootScope.$new(true);
-                        loadingEle = $compile(loadingDirective)(scope);
-                    }
-
-                    this.initSize(loadingEle);
-                    $(ele.children()[1]).hide();
-
-                    $timeout(function () {
-                        loadingEle.show();
-                        loadingEle.find('div').show();
-                    }, 0)
-                    return loadingEle.attr('id');
-                } else {
-                    console.error("LoadingService : no element found!!!")
-                }
-            },
-            hide: function (elementId) {
-                var ele = $document.find('#' + elementId);
-                this.hideUseElement(ele);
-            },
-            hideUseElement: function (ele) {
-                var loadingEle = ele.find('ws-loading');
-                loadingEle.hide();
-                $(ele.children()[1]).show();
-            },
-            initSize: function (ele) {
-                var parent = ele.parent();
-                var width = parent.width();
-                var minHeight = 100;
-                var height = parent.height() >= minHeight ? parent.height(): minHeight;
-                var children = ele.children();
-                $(children[0]).css({
-                    height: height + 'px',
-                    width: width + 'px'
-                });
-                ele.css({
-                    height: height + 'px',
-                    width: width + 'px'
-                });
-            }
-        }
-    }])
-    .directive('wsLoading', ['$timeout', '$rootScope', 'LoadingService', function($timeout, $rootScope, LoadingService){
-        function link(scope, ele, attr, ctrl) {
-
-            scope.status = 'loading';
-
-            scope.$watch('promise.$$state.status', function (newValue, oldValue) {
-                if (newValue !== undefined){
-                    if (newValue === 0){
-                        LoadingService.showUseElement(ele.parent(), scope.loadingImg);
-                    } else {
-                        LoadingService.hideUseElement(ele.parent(), scope.loadingImg);
-                    }
-                }
-            });
-
-            // $rootScope.$on('$wsLoading:loadSuccess', function (evt, id) {
-            //     scope.status = 'success';
-            //     if(ele.attr('id') == id){
-            //         ele.remove();
-            //     }
-            // });
-            //
-            // $rootScope.$on('$wsLoading:loadError', function (evt, id) {
-            //     scope.status = 'error';
-            //     if(ele.attr('id') == id){
-            //         ele.remove();
-            //     }
-            // });
-            //
-            // $rootScope.$on('$wsLoading:loadNoData', function (evt, id) {
-            //     scope.status = 'noData';
-            //     if(ele.attr('id') == id){
-            //         ele.remove();
-            //     }
-            // });
-        }
-
-        return {
-            restrict:'EA',
-            transclude: true,
-            templateUrl:'template/ws-loading.html',
-            scope:{
-                loadingImg: '@',
-                noDataImg: '@',
-                loadErrorImg: '@',
-                promise: '='
-            },
-            compile: function (ele, attrs, transclude) {
-                $timeout(function () {
-                    LoadingService.initSize(ele);
-                    ele.css({
-                        position: 'absolute',
-                        'zIndex': 101,
-                        background: '#fff'
-                    });
-                }, 0);
-                return link;
-            }
-        }
-    }])
-    .run(['$templateCache', function($templateCache){
-        var html = [];
-        html.push('<div style="position: relative; display: none"><div style="display:inline-block;position:absolute; top:50%; left:50%; transform: translate(-50%, -50%);" >');
-        html.push('<img ng-if="status == \'loading\'" ng-src="{{$parent.loadingImg}}"/>')
-        html.push('<img ng-if="status == \'success\'" ng-src="{{$parent.successImg}}"/>')
-        html.push('<img ng-if="status == \'error\'" ng-src="{{$parent.errorImg}}"/>')
-        html.push('<img ng-if="status == \'noData\'" ng-src="{{$parent.noDataImg}}"/>')
-        html.push('</div>')
-        html.push('</div>');
-        $templateCache.put('template/ws-loading.html', html.join(''));
-    }]);
 /**
  * obj.time = '0.00'
  *  obj.currentPlayDuration = 0;
@@ -1474,6 +1309,147 @@ angular.module("ui.website.player",[])
           '</div>'+
       '</div>');
     }]);
+angular.module('ui.website.loading', [])
+    .factory('LoadingService', ['$rootScope', '$document', '$compile', '$timeout', function($rootScope, $document, $compile, $timeout){
+        return {
+            show: function (elementId, imageSrc) {
+                var ele = $document.find('#' + elementId);
+                this.showUseElement(ele);
+            },
+            showUseElement: function (ele, imageSrc) {
+                if (ele.length > 0){
+                    var loadingEle = ele.find('ws-loading');
+                    if (loadingEle.length == 0){
+                        var id = uuid();
+                        var loadingDirective = angular.element('<ws-loading loading-img="'+imageSrc+'"></ws-loading>');
+                        loadingDirective.attr('id', id);
+                        ele.prepend(loadingDirective);
+                        var scope = $rootScope.$new(true);
+                        loadingEle = $compile(loadingDirective)(scope);
+                    }
+
+                    this.initSize(loadingEle);
+                    $(ele.children()[1]).hide();
+
+                    $timeout(function () {
+                        loadingEle.show();
+                        loadingEle.find('div').show();
+                    }, 0)
+                    return loadingEle.attr('id');
+                } else {
+                    console.error("LoadingService : no element found!!!")
+                }
+            },
+            hide: function (elementId) {
+                var ele = $document.find('#' + elementId);
+                this.hideUseElement(ele);
+            },
+            hideUseElement: function (ele) {
+                var loadingEle = ele.find('ws-loading');
+                loadingEle.hide();
+                $(ele.children()[1]).show();
+            },
+            initSize: function (ele) {
+                var parent = ele.parent();
+                var width = parent.width();
+                var minHeight = 100;
+                var height = parent.height() >= minHeight ? parent.height(): minHeight;
+                var children = ele.children();
+                $(children[0]).css({
+                    height: height + 'px',
+                    width: width + 'px'
+                });
+                ele.css({
+                    height: height + 'px',
+                    width: width + 'px'
+                });
+            }
+        }
+    }])
+    .directive('wsLoading', ['$timeout', '$rootScope', 'LoadingService', function($timeout, $rootScope, LoadingService){
+        function link(scope, ele, attr, ctrl) {
+
+            scope.status = 'loading';
+
+            scope.$watch('promise.$$state.status', function (newValue, oldValue) {
+                if (newValue !== undefined){
+                    if (newValue === 0){
+                        LoadingService.showUseElement(ele.parent(), scope.loadingImg);
+                    } else {
+                        LoadingService.hideUseElement(ele.parent(), scope.loadingImg);
+                    }
+                }
+            });
+
+            // $rootScope.$on('$wsLoading:loadSuccess', function (evt, id) {
+            //     scope.status = 'success';
+            //     if(ele.attr('id') == id){
+            //         ele.remove();
+            //     }
+            // });
+            //
+            // $rootScope.$on('$wsLoading:loadError', function (evt, id) {
+            //     scope.status = 'error';
+            //     if(ele.attr('id') == id){
+            //         ele.remove();
+            //     }
+            // });
+            //
+            // $rootScope.$on('$wsLoading:loadNoData', function (evt, id) {
+            //     scope.status = 'noData';
+            //     if(ele.attr('id') == id){
+            //         ele.remove();
+            //     }
+            // });
+        }
+
+        return {
+            restrict:'EA',
+            transclude: true,
+            templateUrl:'template/ws-loading.html',
+            scope:{
+                loadingImg: '@',
+                noDataImg: '@',
+                loadErrorImg: '@',
+                promise: '='
+            },
+            compile: function (ele, attrs, transclude) {
+                $timeout(function () {
+                    LoadingService.initSize(ele);
+                    ele.css({
+                        position: 'absolute',
+                        'zIndex': 101,
+                        background: '#fff'
+                    });
+                }, 0);
+                return link;
+            }
+        }
+    }])
+    .run(['$templateCache', function($templateCache){
+        var html = [];
+        html.push('<div style="position: relative; display: none"><div style="display:inline-block;position:absolute; top:50%; left:50%; transform: translate(-50%, -50%);" >');
+        html.push('<img ng-if="status == \'loading\'" ng-src="{{$parent.loadingImg}}"/>')
+        html.push('<img ng-if="status == \'success\'" ng-src="{{$parent.successImg}}"/>')
+        html.push('<img ng-if="status == \'error\'" ng-src="{{$parent.errorImg}}"/>')
+        html.push('<img ng-if="status == \'noData\'" ng-src="{{$parent.noDataImg}}"/>')
+        html.push('</div>')
+        html.push('</div>');
+        $templateCache.put('template/ws-loading.html', html.join(''));
+    }]);
+function uuid() {
+    var s = [];
+    var hexDigits = "0123456789abcdef";
+    for (var i = 0; i < 36; i++) {
+        s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+    }
+    s[14] = "4";  // bits 12-15 of the time_hi_and_version field to 0010
+    s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1);  // bits 6-7 of the clock_seq_hi_and_reserved to 01
+    s[8] = s[13] = s[18] = s[23] = "-";
+
+    var uuid = s.join("");
+    return uuid;
+}
 angular.module('ui.website.select', [
     'ui.bootstrap',
     'ui.website.select.directives'
@@ -1676,16 +1652,56 @@ angular.module('ui.website.select.directives', ['ui.bootstrap.position'])
             "</ul>\n" +
             "");
     }])
-function uuid() {
-    var s = [];
-    var hexDigits = "0123456789abcdef";
-    for (var i = 0; i < 36; i++) {
-        s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+angular.module('ui.website.fileupload', [])
+.directive('fileUpload', ['$http', function ($http) {
+    return {
+        restrict: 'EA',
+        scope: {
+            url: '@',
+            success: '&',
+            multiple: '@',
+            failure: '&'
+        },
+        templateUrl: 'template/fileupload.html',
+        link: function(scope, ele, attrs, ctrls){
+            var files = ele.find('input')[0].files;
+            $http({
+                method:'POST',
+                url: scope.url,
+                headers: {
+                    'Content-Type': undefined
+                },
+                data: files,
+                transformRequest: function (data, headersGetter) {
+                    var formData = new FormData();
+                    angular.forEach(data, function (value, key) {
+                        formData.append(key, value);
+                    });
+                    return formData;
+                }
+            }).then(function(res){
+                if(res.status == 200){
+                    var data = res.data.data;
+                    // var images = [];
+                    // angular.forEach(data, function(value, index, context){
+                    //     images.push(value.url);
+                    // });
+                    // $scope.ad.images = images;
+                    // $scope.ad.category_id = $scope.childMenu;
+                    // return $http.put('/ad/admin/ad/add1', $scope.ad);
+                    scope.success(res.data.data);
+                } else {
+                    swal('文件上传失败,错误码为:', res.error.error_code + ', 错误原因:'+res.error.errorMsg);
+                    scope.failure(error);
+                }
+            })
+        }
     }
-    s[14] = "4";  // bits 12-15 of the time_hi_and_version field to 0010
-    s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1);  // bits 6-7 of the clock_seq_hi_and_reserved to 01
-    s[8] = s[13] = s[18] = s[23] = "-";
-
-    var uuid = s.join("");
-    return uuid;
-}
+}]).run(['$templateCache', function ($templateCache) {
+    var html = [];
+    html.push('<div>');
+    html.push('<input class="form-control" style="width: 250px" type="file"/>')
+    // html.push('')
+    html.push('</div>');
+    $templateCache.put('template/fileupload.html', html.join(''));
+}]);
