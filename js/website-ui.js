@@ -638,13 +638,13 @@ angular.module("ui.website.chart",[])
                                 },0);
                             }
                         }
-                    })
-                    var chartInstance = echartsInit();
+                    });
 
-                    var running = false;
+                    var chartInstance = echartsInit();
 
                     function paint(newValue) {
                         if(newValue !== undefined){
+                            console.log(JSON.stringify(newValue));
                             try{
                                 if(newValue.status === 'error'){
                                     chartInstance.hideLoading();
@@ -673,39 +673,55 @@ angular.module("ui.website.chart",[])
                         }
                     }
 
+                    /**
+                     * 数据变化的三种情况:
+                     * 1. 引用变化 直接赋予了一个新值
+                     * 2. 值变化 改变了原数据
+                     * 3. 即引用变化, 又值变化 所以两种情况必须都要监听
+                     */
                     scope.$watch('chartData', function(newValue, oldValue){
                         if (newValue !== undefined){
                             // console.log("值比较");
-                            // console.log("旧值:" + oldValue + ",新值" + newValue)
-                            if (!running){
-                                running = true;
-                                paint(newValue);
-                                $timeout(function () {
-                                    running = false;
-                                }, 0);
-                            } else {
-                                // console.log("值比较, 正在运行")
-                            }
+                            // var oldValueStr;
+                            // if (oldValue != undefined){
+                            //     oldValueStr = JSON.stringify(oldValue);
+                            // }
+                            // console.log("旧值:" + oldValueStr + ",新值" + JSON.stringify(newValue));
+                            /**
+                             * 如果直接执行paint方法 echarts会报错
+                             * 所以将两个方法加入队列
+                             */
+                            $timeout(function () {
+                               paint(newValue);
+                            }, 0)
                         }
 
                     }, true);
 
+                    /**
+                     * 数据变化的三种情况:
+                     * 1. 引用变化 直接赋予了一个新值
+                     * 2. 值变化 改变了原数据
+                     * 3. 即引用变化, 又值变化 所以两种情况必须都要监听
+                     */
                     /**
                      * 解决 如果图表重新加载 还是加载不到数据 则无法触发上边的$watch函数 原因(值比较 一直是false 则无法触发)
                      */
                     scope.$watch('chartData', function(newValue, oldValue){
                         if (newValue !== undefined){
                             // console.log("引用比较")
-                            // console.log("旧值:" + oldValue + ",新值" + newValue)
-                            if (!running){
-                                running = true;
+                            // var oldValueStr;
+                            // if (oldValue != undefined){
+                            //     oldValueStr = JSON.stringify(oldValue);
+                            // }
+                            // console.log("旧值:" + oldValueStr + ",新值" + JSON.stringify(newValue));
+                            /**
+                             * 如果直接执行paint方法 echarts会报错
+                             * 所以将两个方法加入队列
+                             */
+                            $timeout(function () {
                                 paint(newValue);
-                                $timeout(function () {
-                                    running = false;
-                                }, 0);
-                            } else {
-                                // console.log("引用比较, 正在运行")
-                            }
+                            }, 0)
                         }
                     });
                 }
@@ -721,59 +737,6 @@ angular.module("ui.website.chart",[])
     $templateCache.put('website-ui/chart/no-data.html', template.join(''));
 }]);
 
-angular.module('ui.website.fileupload', [])
-.directive('fileUpload', ['$http', function ($http) {
-    return {
-        restrict: 'EA',
-        scope: {
-            url: '@',
-            success: '&',
-            multiple: '@',
-            failure: '&'
-        },
-        templateUrl: 'template/fileupload.html',
-        link: function(scope, ele, attrs, ctrls){
-            var files = ele.find('input')[0].files;
-            $http({
-                method:'POST',
-                url: scope.url,
-                headers: {
-                    'Content-Type': undefined
-                },
-                data: files,
-                transformRequest: function (data, headersGetter) {
-                    var formData = new FormData();
-                    angular.forEach(data, function (value, key) {
-                        formData.append(key, value);
-                    });
-                    return formData;
-                }
-            }).then(function(res){
-                if(res.status == 200){
-                    var data = res.data.data;
-                    // var images = [];
-                    // angular.forEach(data, function(value, index, context){
-                    //     images.push(value.url);
-                    // });
-                    // $scope.ad.images = images;
-                    // $scope.ad.category_id = $scope.childMenu;
-                    // return $http.put('/ad/admin/ad/add1', $scope.ad);
-                    scope.success(res.data.data);
-                } else {
-                    swal('文件上传失败,错误码为:', res.error.error_code + ', 错误原因:'+res.error.errorMsg);
-                    scope.failure(error);
-                }
-            })
-        }
-    }
-}]).run(['$templateCache', function ($templateCache) {
-    var html = [];
-    html.push('<div>');
-    html.push('<input class="form-control" style="width: 250px" type="file"/>')
-    // html.push('')
-    html.push('</div>');
-    $templateCache.put('template/fileupload.html', html.join(''));
-}]);
 angular.module('ui.website.dialog', [
   'ui.website.dialog.service',
   'ui.website.dialog.directives'
@@ -1124,6 +1087,59 @@ angular.module('ui.website.dialog.service', [])
         }
       }
     }])
+angular.module('ui.website.fileupload', [])
+.directive('fileUpload', ['$http', function ($http) {
+    return {
+        restrict: 'EA',
+        scope: {
+            url: '@',
+            success: '&',
+            multiple: '@',
+            failure: '&'
+        },
+        templateUrl: 'template/fileupload.html',
+        link: function(scope, ele, attrs, ctrls){
+            var files = ele.find('input')[0].files;
+            $http({
+                method:'POST',
+                url: scope.url,
+                headers: {
+                    'Content-Type': undefined
+                },
+                data: files,
+                transformRequest: function (data, headersGetter) {
+                    var formData = new FormData();
+                    angular.forEach(data, function (value, key) {
+                        formData.append(key, value);
+                    });
+                    return formData;
+                }
+            }).then(function(res){
+                if(res.status == 200){
+                    var data = res.data.data;
+                    // var images = [];
+                    // angular.forEach(data, function(value, index, context){
+                    //     images.push(value.url);
+                    // });
+                    // $scope.ad.images = images;
+                    // $scope.ad.category_id = $scope.childMenu;
+                    // return $http.put('/ad/admin/ad/add1', $scope.ad);
+                    scope.success(res.data.data);
+                } else {
+                    swal('文件上传失败,错误码为:', res.error.error_code + ', 错误原因:'+res.error.errorMsg);
+                    scope.failure(error);
+                }
+            })
+        }
+    }
+}]).run(['$templateCache', function ($templateCache) {
+    var html = [];
+    html.push('<div>');
+    html.push('<input class="form-control" style="width: 250px" type="file"/>')
+    // html.push('')
+    html.push('</div>');
+    $templateCache.put('template/fileupload.html', html.join(''));
+}]);
 angular.module('ui.website.loading', [])
     .factory('LoadingService', ['$rootScope', '$document', '$compile', '$timeout', function($rootScope, $document, $compile, $timeout){
         return {
